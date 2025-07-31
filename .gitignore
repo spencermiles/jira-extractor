@@ -1,0 +1,10 @@
+.env
+.env.example
+venv/lib
+venv/include
+venv/bin
+data/*
+__pycache__/*
+.DS_Store
+jira_data.db
+*.db

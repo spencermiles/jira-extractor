@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/jira-issues-schema.json",
+  "title": "Jira Issues Array",
+  "description": "Schema for an array of Jira issues from Q2 data (May-June)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "key",
+      "summary", 
+      "description",
+      "issue_type",
+      "status",
+      "priority",
+      "assignee",
+      "reporter",
+      "created",
+      "updated",
+      "resolved",
+      "project_key",
+      "labels",
+      "components",
+      "fix_versions",
+      "story_points",
+      "parent_key",
+      "linked_issues",
+      "epic_key",
+      "epic_name",
+      "sprint_info",
+      "changelogs"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier for the Jira issue"
+      },
+      "key": {
+        "type": "string",
+        "pattern": "^[A-Z]+-[0-9]+$",
+        "description": "Jira issue key (e.g., OS2-8257)"
+      },
+      "summary": {
+        "type": "string",
+        "description": "Brief summary of the issue"
+      },
+      "description": {
+        "type": "string",
+        "description": "Detailed description of the issue"
+      },
+      "issue_type": {
+        "type": "string",
+        "enum": ["Sub-Bug", "Sub-task", "Story", "Bug", "Task", "Epic"],
+        "description": "Type of the Jira issue"
+      },
+      "status": {
+        "type": "string",
+        "description": "Current status of the issue"
+      },
+      "priority": {
+        "type": "string",
+        "description": "Priority level of the issue"
+      },
+      "assignee": {
+        "type": "string",
+        "description": "Person assigned to the issue"
+      },
+      "reporter": {
+        "type": "string", 
+        "description": "Person who reported the issue"
+      },
+      "created": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO datetime when the issue was created"
+      },
+      "updated": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO datetime when the issue was last updated"
+      },
+      "resolved": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO datetime when the issue was resolved"
+      },
+      "project_key": {
+        "type": "string",
+        "description": "Project key (e.g., OS2)"
+      },
+      "labels": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of labels associated with the issue"
+      },
+      "components": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of components associated with the issue"
+      },
+      "fix_versions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of fix versions for the issue"
+      },
+      "story_points": {
+        "type": ["number", "null"],
+        "description": "Story points assigned to the issue"
+      },
+      "parent_key": {
+        "type": "string",
+        "pattern": "^[A-Z]+-[0-9]+$",
+        "description": "Parent issue key if this is a sub-task or sub-bug"
+      },
+      "linked_issues": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        },
+        "description": "Array of linked issues"
+      },
+      "epic_key": {
+        "type": ["string", "null"],
+        "description": "Epic key if issue belongs to an epic"
+      },
+      "epic_name": {
+        "type": ["string", "null"],
+        "description": "Epic name if issue belongs to an epic"
+      },
+      "sprint_info": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "name", "state", "start_date", "end_date", "complete_date"],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "description": "Unique identifier for the sprint"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the sprint"
+            },
+            "state": {
+              "type": "string",
+              "enum": ["future", "active", "closed"],
+              "description": "Current state of the sprint"
+            },
+            "start_date": {
+              "type": ["string", "null"],
+              "format": "date-time",
+              "description": "ISO datetime when the sprint started"
+            },
+            "end_date": {
+              "type": ["string", "null"],
+              "format": "date-time", 
+              "description": "ISO datetime when the sprint ended"
+            },
+            "complete_date": {
+              "type": ["string", "null"],
+              "format": "date-time",
+              "description": "ISO datetime when the sprint was completed"
+            }
+          },
+          "additionalProperties": false
+        },
+        "description": "Array of sprints this issue has been part of"
+      },
+      "changelogs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "change_id",
+            "author",
+            "created",
+            "field_name",
+            "field_type",
+            "from_value",
+            "to_value",
+            "from_string",
+            "to_string"
+          ],
+          "properties": {
+            "change_id": {
+              "type": "string",
+              "description": "Unique identifier for the change"
+            },
+            "author": {
+              "type": "string",
+              "description": "Person who made the change"
+            },
+            "created": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO datetime when the change was made"
+            },
+            "field_name": {
+              "type": "string",
+              "description": "Name of the field that was changed"
+            },
+            "field_type": {
+              "type": "string",
+              "enum": ["jira", "custom"],
+              "description": "Type of field (jira system field or custom field)"
+            },
+            "from_value": {
+              "type": ["string", "null"],
+              "description": "Previous value of the field"
+            },
+            "to_value": {
+              "type": ["string", "null"],
+              "description": "New value of the field"
+            },
+            "from_string": {
+              "type": ["string", "null"],
+              "description": "Previous display string of the field"
+            },
+            "to_string": {
+              "type": ["string", "null"],
+              "description": "New display string of the field"
+            }
+          },
+          "additionalProperties": false
+        },
+        "description": "Array of all changes made to this issue"
+      }
+    },
+    "additionalProperties": false
+  }
+} 
