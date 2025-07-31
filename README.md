@@ -19,6 +19,37 @@ A command-line tool to extract JIRA issues and their changelogs using JQL querie
 
 ## Installation
 
+### Option 1: Using uv (Recommended)
+
+The easiest way to use this tool is with [uv](https://docs.astral.sh/uv/), which automatically manages dependencies:
+
+1. Install uv:
+```bash
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or via pip
+pip install uv
+```
+
+2. Make the script executable (optional):
+```bash
+chmod +x jira_dump.py
+```
+
+3. Set up your JIRA credentials:
+```bash
+cp .env.example .env
+# Edit .env with your JIRA URL, username, and API token
+```
+
+That's it! No need to manage virtual environments or install dependencies manually.
+
+### Option 2: Traditional Python Setup
+
 1. Install Python dependencies:
 ```bash
 python3 -m venv venv
@@ -34,46 +65,63 @@ cp .env.example .env
 
 ## Usage
 
-### Basic Usage (JSON Output - Default)
+### Using uv (Recommended)
+
+With uv, dependencies are automatically installed the first time you run the script:
 
 ```bash
-# Output to stdout (JSON)
-python jira_dump.py --jql "project = OS2 AND resolved >= \"2025-04-01\" ORDER BY created DESC"
+# Run directly (if script is executable)
+./jira_dump.py --jql "project = OS2 AND resolved >= \"2025-04-01\" ORDER BY created DESC"
+
+# Or use uv run explicitly
+uv run jira_dump.py --jql "project = PROJ AND status = 'In Progress'" --output issues.json
 
 # Output to JSON file
-python jira_dump.py --jql "project = PROJ AND status = 'In Progress'" --output issues.json
+uv run jira_dump.py --jql "project = PROJ" --output issues.json
 
 # Compact JSON (no pretty-printing)
-python jira_dump.py --jql "project = PROJ" --output issues.json --no-pretty
+uv run jira_dump.py --jql "project = PROJ" --output issues.json --no-pretty
 
 # Extract without changelogs for faster processing
-python jira_dump.py --jql "project = PROJ" --no-changelogs --output issues.json
+uv run jira_dump.py --jql "project = PROJ" --no-changelogs --output issues.json
 ```
 
-### SQLite Output (Optional)
+### SQLite Output
 
 ```bash
 # Output to SQLite database
-python jira_dump.py --jql "project = PROJ" --format sqlite --database my_data.db
+uv run jira_dump.py --jql "project = PROJ" --format sqlite --database my_data.db
 
 # Use default database name (jira_data.db)
-python jira_dump.py --jql "project = PROJ" --format sqlite
+uv run jira_dump.py --jql "project = PROJ" --format sqlite
 ```
 
 ### Advanced Options
 
 ```bash
 # Use more concurrent workers for faster changelog fetching
-python jira_dump.py --jql "project = PROJ" --max-workers 20 --output issues.json
+uv run jira_dump.py --jql "project = PROJ" --max-workers 20 --output issues.json
 
 # Fetch more issues
-python jira_dump.py --jql "project = PROJ" --max-results 2000 --output issues.json
+uv run jira_dump.py --jql "project = PROJ" --max-results 2000 --output issues.json
 
 # Using command line credentials (not recommended, use .env instead)
-python jira_dump.py --jira-url https://your-company.atlassian.net \
+uv run jira_dump.py --jira-url https://your-company.atlassian.net \
                     --username your-email@company.com \
                     --api-token your-api-token \
                     --jql "project = PROJ"
+```
+
+### Traditional Python Usage
+
+If you prefer to use traditional Python setup instead of uv:
+
+```bash
+# Activate your virtual environment first
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Then run with python
+python jira_dump.py --jql "project = PROJ" --output issues.json
 ```
 
 ## Output Formats
@@ -232,25 +280,30 @@ The tool includes several performance optimizations:
 
 Extract all bugs from the last week as JSON:
 ```bash
-python jira_dump.py --jql "type = Bug AND created >= -7d" --output recent_bugs.json
+uv run jira_dump.py --jql "type = Bug AND created >= -7d" --output recent_bugs.json
 ```
 
 Extract project issues to SQLite for analysis:
 ```bash
-python jira_dump.py --jql "project = MYPROJECT" --format sqlite --database myproject.db
+uv run jira_dump.py --jql "project = MYPROJECT" --format sqlite --database myproject.db
 ```
 
 Quick extraction without changelogs:
 ```bash
-python jira_dump.py --jql "project = PROJ AND assignee = currentUser()" --no-changelogs
+uv run jira_dump.py --jql "project = PROJ AND assignee = currentUser()" --no-changelogs
 ```
 
 Extract all issues from a specific epic:
 ```bash
-python jira_dump.py --jql "\"Epic Link\" = \"PROJ-50\"" --output epic_issues.json
+uv run jira_dump.py --jql "\"Epic Link\" = \"PROJ-50\"" --output epic_issues.json
 ```
 
 Extract issues from active sprints:
 ```bash
-python jira_dump.py --jql "sprint in openSprints() AND project = PROJ" --output active_sprint.json
+uv run jira_dump.py --jql "sprint in openSprints() AND project = PROJ" --output active_sprint.json
+```
+
+**Or run directly if the script is executable:**
+```bash
+./jira_dump.py --jql "type = Bug AND created >= -7d" --output recent_bugs.json
 ```

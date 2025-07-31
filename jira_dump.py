@@ -1,10 +1,24 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "requests>=2.31.0",
+#     "click>=8.1.0",
+#     "python-dotenv>=1.0.0",
+# ]
+# ///
 """
 JIRA Issue and Changelog Extractor
 
 A command-line tool to extract JIRA issues and their changelogs using JQL queries.
 Can output to JSON (default) or SQLite database. Automatically extracts story points,
 parent issues, and linked issues.
+
+Usage with uv:
+    uv run jira_dump.py --jql "project = MYPROJECT" --output issues.json
+    
+Traditional usage:
+    python jira_dump.py --jql "project = MYPROJECT" --output issues.json
 """
 
 import sqlite3
