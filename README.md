@@ -1,13 +1,12 @@
 # JIRA Issue Extractor
 
-A command-line tool to extract JIRA issues and their changelogs using JQL queries. Can output to JSON (default) or SQLite database for analysis.
+A command-line tool to extract JIRA issues and their changelogs using JQL queries. Outputs structured JSON data for analysis.
 
 ## Features
 
 - Extract JIRA issues using JQL queries
 - Fetch issue changelogs with full history
-- **JSON output by default** - more useful for most analysis tasks
-- Optional SQLite database output for structured storage
+- **JSON output** - structured data for analysis
 - **Parent issue and linked issues support** - captures relationships between issues
 - **Epic and sprint information** - extracts epic keys/names and sprint details
 - Story points extraction from customfield_10026
@@ -16,6 +15,7 @@ A command-line tool to extract JIRA issues and their changelogs using JQL querie
 - **Concurrent changelog fetching** for improved performance
 - **Connection pooling** and automatic retry logic
 - Comprehensive error handling and logging
+- **Project names** - includes both project keys and human-readable names
 
 ## Installation
 
@@ -86,15 +86,7 @@ uv run jira_dump.py --jql "project = PROJ" --output issues.json --no-pretty
 uv run jira_dump.py --jql "project = PROJ" --no-changelogs --output issues.json
 ```
 
-### SQLite Output
 
-```bash
-# Output to SQLite database
-uv run jira_dump.py --jql "project = PROJ" --format sqlite --database my_data.db
-
-# Use default database name (jira_data.db)
-uv run jira_dump.py --jql "project = PROJ" --format sqlite
-```
 
 ### Advanced Options
 
@@ -124,9 +116,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 python jira_dump.py --jql "project = PROJ" --output issues.json
 ```
 
-## Output Formats
-
-### JSON Output (Default)
+## JSON Output Format
 
 The JSON output includes comprehensive issue data with parsed descriptions and structured changelogs:
 
@@ -146,6 +136,7 @@ The JSON output includes comprehensive issue data with parsed descriptions and s
     "updated": "2024-01-16T14:20:00.000+0000",
     "resolved": null,
     "project_key": "PROJ",
+    "project_name": "My Project",
     "labels": ["security", "urgent"],
     "components": ["Authentication"],
     "fix_versions": ["v2.1.0"],
@@ -188,46 +179,7 @@ The JSON output includes comprehensive issue data with parsed descriptions and s
 ]
 ```
 
-### SQLite Output
 
-When using `--format sqlite`, data is stored in two tables:
-
-#### Issues Table
-- `id`: JIRA issue ID
-- `key`: Issue key (e.g., PROJ-123)
-- `summary`: Issue title
-- `description`: Issue description (JSON if complex formatting)
-- `issue_type`: Type (Bug, Story, etc.)
-- `status`: Current status
-- `priority`: Priority level
-- `assignee`: Assigned user
-- `reporter`: Reporter
-- `created`: Creation date
-- `updated`: Last update date
-- `resolved`: Resolution date
-- `project_key`: Project key
-- `labels`: JSON array of labels
-- `components`: JSON array of components
-- `fix_versions`: JSON array of fix versions
-- `story_points`: Story points from customfield_10026
-- `parent_key`: Parent issue key (for subtasks/child issues)
-- `linked_issues`: JSON array of linked issues with relationship info
-- `epic_key`: Epic issue key (extracted from common custom fields)
-- `epic_name`: Epic name/summary
-- `sprint_info`: JSON array of sprint information with names, states, and dates
-- `raw_data`: Complete JSON data from JIRA
-
-#### Changelogs Table
-- `issue_key`: Reference to issue
-- `change_id`: Changelog entry ID
-- `author`: User who made the change
-- `created`: Change timestamp
-- `field_name`: Changed field name
-- `field_type`: Field type
-- `from_value`: Previous value
-- `to_value`: New value
-- `from_string`: Previous display value
-- `to_string`: New display value
 
 ## JQL Query Examples
 
@@ -274,18 +226,12 @@ The tool includes several performance optimizations:
 - `--max-workers`: Number of concurrent workers for changelog fetching (default: 10)
 - `--no-changelogs`: Skip changelog fetching for faster issue extraction
 - Automatic connection pooling and retry logic
-- Batch database operations (SQLite mode)
 
 ## Examples
 
 Extract all bugs from the last week as JSON:
 ```bash
 uv run jira_dump.py --jql "type = Bug AND created >= -7d" --output recent_bugs.json
-```
-
-Extract project issues to SQLite for analysis:
-```bash
-uv run jira_dump.py --jql "project = MYPROJECT" --format sqlite --database myproject.db
 ```
 
 Quick extraction without changelogs:
