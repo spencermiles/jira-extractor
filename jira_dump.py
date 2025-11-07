@@ -76,10 +76,11 @@ class JiraExtractor:
     def get_issues(self, jql: str, max_results: int = 1000) -> List[Dict]:
         """Fetch issues using JQL query."""
         issues = []
-        start_at = 0
+        next_page_token = None
+        page_number = 0
         
         while True:
-            url = f"{self.jira_url}/rest/api/3/search"
+            url = f"{self.jira_url}/rest/api/3/search/jql"
             
             # If max_results is 0 or -1, fetch all issues without limit
             if max_results <= 0:
@@ -87,34 +88,87 @@ class JiraExtractor:
             else:
                 batch_size = min(100, max_results - len(issues))
             
+            # Build params - use nextPageToken if available, otherwise use startAt
             params = {
                 'jql': jql,
-                'startAt': start_at,
                 'maxResults': batch_size,
-                'expand': 'changelog'
+                'expand': 'changelog',
+                'fields': '*all'  # Request all fields from the new API
             }
             
-            logger.info(f"Fetching issues {start_at} to {start_at + params['maxResults']}")
+            if next_page_token:
+                params['nextPageToken'] = next_page_token
+            else:
+                params['startAt'] = 0
+            
+            logger.info(f"Fetching page {page_number + 1} (up to {batch_size} issues)")
+            logger.debug(f"Request URL: {url}")
+            logger.debug(f"Request params: {params}")
             
             try:
                 response = self.session.get(url, params=params)
+                logger.debug(f"Response status code: {response.status_code}")
+                logger.debug(f"Response headers: {dict(response.headers)}")
+                
+                # Check for authentication issues
+                if 'X-Seraph-Loginreason' in response.headers:
+                    login_reason = response.headers['X-Seraph-Loginreason']
+                    if 'FAILED' in login_reason or 'DENIED' in login_reason:
+                        logger.warning(f"Authentication may have failed: {login_reason}")
+                        logger.warning("Check your JIRA credentials (URL, username, API token)")
+                
                 response.raise_for_status()
                 data = response.json()
                 
+                batch_size = len(data.get('issues', []))
+                logger.info(f"API returned {batch_size} issues in this batch")
+                logger.info(f"Total issues fetched so far: {len(issues) + batch_size}")
+                
+                # Note: The new /rest/api/3/search/jql endpoint doesn't provide a total count
+                if 'total' in data:
+                    logger.info(f"Total issues available: {data['total']}")
+                
+                logger.debug(f"Response keys: {list(data.keys())}")
+                logger.debug(f"Full response data: {json.dumps(data, indent=2)[:1000]}...")  # First 1000 chars
+                
+                if 'errorMessages' in data or 'errors' in data:
+                    logger.error(f"API returned errors: {data}")
+                
                 issues.extend(data['issues'])
                 
-                # Break if no more issues returned
-                if len(data['issues']) < params['maxResults']:
+                # Check if this is the last page
+                is_last = data.get('isLast', False)
+                next_page_token = data.get('nextPageToken')
+                
+                logger.debug(f"isLast: {is_last}, hasNextPageToken: {bool(next_page_token)}")
+                
+                # Break conditions
+                if is_last:
+                    logger.info("Reached last page of results (isLast=true)")
+                    break
+                
+                if not next_page_token and len(data['issues']) == 0:
+                    logger.info("No more issues and no nextPageToken - end of results")
+                    break
+                
+                if not next_page_token:
+                    logger.warning("No nextPageToken provided but isLast=false - assuming end of results")
                     break
                 
                 # Break if we've reached the specified limit (only when max_results > 0)
                 if max_results > 0 and len(issues) >= max_results:
                     break
-                    
-                start_at += len(data['issues'])
                 
+                page_number += 1
+                
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP error fetching issues: {e}")
+                logger.error(f"Response content: {response.text if 'response' in locals() else 'No response'}")
+                raise
             except requests.exceptions.RequestException as e:
-                logger.error(f"Error fetching issues: {e}")
+                logger.error(f"Request error fetching issues: {e}")
+                if 'response' in locals():
+                    logger.error(f"Response content: {response.text}")
                 raise
                 
         logger.info(f"Retrieved {len(issues)} issues")
@@ -310,6 +364,7 @@ class JsonProcessor:
                 'issue_type': fields.get('issuetype', {}).get('name', '') if fields.get('issuetype') else '',
                 'status': fields.get('status', {}).get('name', '') if fields.get('status') else '',
                 'priority': fields.get('priority', {}).get('name', '') if fields.get('priority') else '',
+                'priority_id': fields.get('priority', {}).get('id', '') if fields.get('priority') else '',
                 'assignee': fields.get('assignee', {}).get('displayName', '') if fields.get('assignee') else '',
                 'reporter': fields.get('reporter', {}).get('displayName', '') if fields.get('reporter') else '',
                 'created': fields.get('created', ''),
@@ -365,11 +420,19 @@ class JsonProcessor:
 @click.option('--include-changelogs/--no-changelogs', default=True, help='Include issue changelogs')
 @click.option('--max-workers', default=10, help='Maximum number of concurrent workers for changelog fetching')
 @click.option('--pretty/--no-pretty', default=True, help='Pretty-print JSON output')
+@click.option('--verbose', '-v', is_flag=True, help='Enable verbose debug logging')
 def main(jira_url: str, username: str, api_token: str, jql: str, output: Optional[str], 
-         max_results: int, include_changelogs: bool, max_workers: int, pretty: bool):
+         max_results: int, include_changelogs: bool, max_workers: int, pretty: bool, verbose: bool):
     """Extract JIRA issues and changelogs to JSON format."""
     
     try:
+        # Configure logging level based on verbose flag
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+            # Also enable debug logging for requests library
+            logging.getLogger('urllib3').setLevel(logging.DEBUG)
+            logger.debug("Verbose logging enabled")
+        
         # Get credentials from environment if not provided via CLI
         jira_url = jira_url or os.getenv('JIRA_URL')
         username = username or os.getenv('JIRA_USERNAME')
@@ -394,7 +457,7 @@ def main(jira_url: str, username: str, api_token: str, jql: str, output: Optiona
             logger.warning("No issues found matching the JQL query")
             return
         
-        logger.info("Extracting story points, parent issues, linked issues, epics, project names, and sprint information")
+        logger.info("Extracting story points, parent issues, linked issues, epics, project names, sprint information, and priority ordering")
         
         # Fetch changelogs if requested
         changelogs_dict = {}
